@@ -16,19 +16,27 @@
 }
 
 .markdown-body {
-  @apply text-sm leading-relaxed text-gray-900 font-semibold;
+  @apply text-base leading-relaxed text-gray-900 font-semibold;
 }
 
 .markdown-body p {
-  @apply mb-4 last:mb-0;
+  @apply mb-5 last:mb-0;
 }
 
 .markdown-body pre {
-  @apply bg-gray-100 rounded-lg p-4 my-4 overflow-x-auto border border-gray-200;
+  @apply bg-gray-100 rounded-xl p-0 my-5 overflow-hidden border border-gray-200 relative;
+}
+
+.markdown-body .code-header {
+  @apply flex items-center justify-between px-4 py-2 bg-gray-200/50 border-b border-gray-200 text-xs font-mono text-gray-600;
+}
+
+.markdown-body .code-content {
+  @apply p-4 overflow-x-auto;
 }
 
 .markdown-body code {
-  @apply font-mono text-xs bg-gray-200 px-1 rounded text-pink-600;
+  @apply font-mono text-sm bg-gray-200 px-1.5 py-0.5 rounded text-pink-600;
 }
 
 .markdown-body ul, .markdown-body ol {

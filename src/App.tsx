@@ -24,13 +24,48 @@ import {
   Eye,
   Code,
   ThumbsDown,
-  Pencil
+  Pencil,
+  Check,
+  Smile
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "./lib/utils";
 import { sendMessageStream, Message } from "./services/geminiService";
+
+const CodeBlock = ({ children, className, copyToClipboard }: any) => {
+  const [copied, setCopied] = useState(false);
+  const match = /language-(\w+)/.exec(className || "");
+  const lang = match ? match[1] : "";
+  const codeString = String(children).replace(/\n$/, "");
+
+  const handleCopy = () => {
+    copyToClipboard(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="my-5 border border-border rounded-xl overflow-hidden bg-gray-100">
+      <div className="flex items-center justify-between px-4 py-2 bg-gray-200/50 border-b border-border">
+        <span className="text-xs font-mono text-gray-500">{lang || "code"}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-gray-300 text-xs font-medium transition-colors text-gray-600"
+        >
+          {copied ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+          {copied ? "Copied!" : "Copy code"}
+        </button>
+      </div>
+      <div className="p-4 overflow-x-auto">
+        <code className={cn("text-sm font-mono text-gray-800", className)}>
+          {children}
+        </code>
+      </div>
+    </div>
+  );
+};
 
 const HTMLPreview = ({ code }: { code: string }) => {
   const [showPreview, setShowPreview] = useState(false);
@@ -300,50 +335,64 @@ export default function App() {
                     message.role === "user" ? "items-end" : "items-start"
                   )}
                 >
-                  <div
-                    className={cn(
-                      "max-w-[90%] rounded-2xl px-5 py-4 text-sm font-semibold",
-                      message.role === "user" 
-                        ? "bg-user-msg text-gray-900 shadow-sm" 
-                        : "bg-ai-msg text-gray-800"
-                    )}
-                  >
-                    <div className="markdown-body">
-                      {message.type === "image" && message.imageData ? (
-                        <div className="space-y-2">
-                          <p className="mb-2 text-gray-500 italic">Generated Image:</p>
-                          <img 
-                            src={message.imageData} 
-                            alt="Generated" 
-                            className="rounded-xl max-w-full h-auto border border-border shadow-md"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                      ) : (
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            code({ node, inline, className, children, ...props }: any) {
-                              const match = /language-(\w+)/.exec(className || "");
-                              const lang = match ? match[1] : "";
-                              const codeString = String(children).replace(/\n$/, "");
-                              
-                              if (!inline && lang === "html") {
-                                return <HTMLPreview code={codeString} />;
-                              }
-                              
-                              return (
-                                <code className={className} {...props}>
-                                  {children}
-                                </code>
-                              );
-                            }
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
+                    <div
+                      className={cn(
+                        "max-w-[90%] rounded-2xl px-6 py-5 text-lg font-semibold",
+                        message.role === "user" 
+                          ? "bg-user-msg text-gray-900 shadow-sm" 
+                          : "bg-ai-msg text-gray-800"
                       )}
-                    </div>
+                    >
+                      <div className="markdown-body">
+                        {message.type === "image" && message.imageData ? (
+                          <div className="space-y-3">
+                            <p className="mb-3 text-gray-500 italic text-base">Generated Image:</p>
+                            <img 
+                              src={message.imageData} 
+                              alt="Generated" 
+                              className="rounded-2xl max-w-full h-auto border border-border shadow-md"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                        ) : (
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || "");
+                                const lang = match ? match[1] : "";
+                                const codeString = String(children).replace(/\n$/, "");
+                                
+                                if (!inline && lang === "html") {
+                                  return <HTMLPreview code={codeString} />;
+                                }
+
+                                if (!inline) {
+                                  return (
+                                    <CodeBlock 
+                                      className={className} 
+                                      copyToClipboard={copyToClipboard}
+                                    >
+                                      {children}
+                                    </CodeBlock>
+                                  );
+                                }
+                                
+                                return (
+                                  <code className={cn("text-sm font-mono", className)} {...props}>
+                                    {children}
+                                  </code>
+                                );
+                              },
+                              pre({ children }) {
+                                return <>{children}</>;
+                              }
+                            }}
+                          >
+                            {message.content}
+                          </ReactMarkdown>
+                        )}
+                      </div>
                     {message.role === "model" && isLoading && message.content === "" && (
                       <div className="flex gap-1 mt-2">
                         <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
@@ -354,33 +403,45 @@ export default function App() {
                   </div>
                   
                   {message.role === "model" && message.content !== "" && (
-                    <div className="flex items-center gap-1 ml-1 transition-opacity">
-                      <button 
-                        onClick={() => copyToClipboard(message.content)}
-                        className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
-                        title="Copy"
-                      >
-                        <Copy size={14} />
-                      </button>
-                      <button 
-                        className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
-                        title="Like"
-                      >
-                        <ThumbsUp size={14} />
-                      </button>
-                      <button 
-                        className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
-                        title="Dislike"
-                      >
-                        <ThumbsDown size={14} />
-                      </button>
-                      <button 
-                        onClick={handleRegenerate}
-                        className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
-                        title="Regenerate"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
+                    <div className="flex flex-col gap-2 ml-1">
+                      <div className="flex items-center gap-1 transition-opacity">
+                        <button 
+                          onClick={() => copyToClipboard(message.content)}
+                          className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
+                          title="Copy"
+                        >
+                          <Copy size={14} />
+                        </button>
+                        <button 
+                          className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
+                          title="Like"
+                        >
+                          <ThumbsUp size={14} />
+                        </button>
+                        <button 
+                          className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
+                          title="Dislike"
+                        >
+                          <ThumbsDown size={14} />
+                        </button>
+                        <button 
+                          onClick={handleRegenerate}
+                          className="p-1.5 hover:bg-black/5 rounded text-gray-500 hover:text-gray-900 transition-colors"
+                          title="Regenerate"
+                        >
+                          <RotateCcw size={14} />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {["❤️", "🔥", "💯", "🙌", "💡"].map((emoji) => (
+                          <button
+                            key={emoji}
+                            className="text-sm p-1 hover:bg-black/5 rounded transition-all grayscale hover:grayscale-0"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 
@@ -423,7 +484,7 @@ export default function App() {
                 }}
                 placeholder="Message AM..."
                 rows={1}
-                className="w-full bg-transparent border-none focus:ring-0 resize-none py-4 px-4 text-sm max-h-60 custom-scrollbar text-gray-900"
+                className="w-full bg-transparent border-none focus:ring-0 resize-none py-4 px-4 text-lg max-h-60 custom-scrollbar text-gray-900 font-semibold"
                 style={{ height: "auto" }}
                 onInput={(e) => {
                   const target = e.target as HTMLTextAreaElement;
