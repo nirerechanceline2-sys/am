@@ -1,0 +1,5 @@
+{
+  "name": "AM",
+  "description": "A high-fidelity ChatGPT-inspired interface powered by Gemini AI, featuring streaming responses, markdown support, and a clean, modern design.",
+  "requestFramePermissions": []
+}
