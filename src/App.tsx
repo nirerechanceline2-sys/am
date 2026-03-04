@@ -26,7 +26,11 @@ import {
   ThumbsDown,
   Pencil,
   Check,
-  Smile
+  Smile,
+  MoreVertical,
+  Edit2,
+  CheckCircle2,
+  ArrowRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import ReactMarkdown from "react-markdown";
@@ -104,6 +108,9 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [chatHistory, setChatHistory] = useState<{ id: string; title: string }[]>([]);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const abortControllerRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -194,6 +201,27 @@ export default function App() {
     setChatHistory([]);
   };
 
+  const deleteChat = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setChatHistory(prev => prev.filter(chat => chat.id !== id));
+  };
+
+  const startEditingChat = (id: string, title: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingChatId(id);
+    setEditingTitle(title);
+  };
+
+  const saveChatTitle = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingChatId && editingTitle.trim()) {
+      setChatHistory(prev => prev.map(chat => 
+        chat.id === editingChatId ? { ...chat, title: editingTitle } : chat
+      ));
+      setEditingChatId(null);
+    }
+  };
+
   const stopGenerating = () => {
     abortControllerRef.current = true;
     setIsLoading(false);
@@ -237,13 +265,40 @@ export default function App() {
               Recent
             </div>
             {chatHistory.map((chat) => (
-              <button
-                key={chat.id}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-black/5 transition-colors text-sm text-gray-600 group"
-              >
-                <MessageSquare size={16} className="shrink-0" />
-                <span className="truncate">{chat.title}</span>
-              </button>
+              <div key={chat.id} className="group relative">
+                {editingChatId === chat.id ? (
+                  <form onSubmit={saveChatTitle} className="px-2 py-1">
+                    <input
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={() => setEditingChatId(null)}
+                      className="w-full bg-white border border-indigo-500 rounded px-2 py-1 text-sm outline-none"
+                    />
+                  </form>
+                ) : (
+                  <button
+                    className="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-black/5 transition-colors text-sm text-gray-600 group"
+                  >
+                    <MessageSquare size={16} className="shrink-0" />
+                    <span className="truncate flex-1 text-left">{chat.title}</span>
+                    <div className="hidden group-hover:flex items-center gap-1">
+                      <button 
+                        onClick={(e) => startEditingChat(chat.id, chat.title, e)}
+                        className="p-1 hover:bg-black/10 rounded"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                      <button 
+                        onClick={(e) => deleteChat(chat.id, e)}
+                        className="p-1 hover:bg-red-100 text-red-500 rounded"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </button>
+                )}
+              </div>
             ))}
             {chatHistory.length > 0 && (
               <button
@@ -261,14 +316,8 @@ export default function App() {
               <Settings size={16} />
               <span>Settings</span>
             </button>
-            <div className="flex items-center gap-3 px-3 py-2 mt-2">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-                U
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium truncate text-gray-900">User Account</p>
-                <p className="text-xs text-gray-500 truncate">Free Plan</p>
-              </div>
+            <div className="px-3 py-4 text-[10px] text-gray-400 text-center border-t border-border mt-2">
+              Developed by <span className="font-bold text-gray-600">REMY WILLIAM</span>
             </div>
           </div>
         </div>
@@ -289,15 +338,99 @@ export default function App() {
             <ChevronDown size={16} className="text-gray-400" />
           </div>
           <div className="ml-auto flex items-center gap-3">
-            <button className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/5 hover:bg-black/10 transition-colors text-xs font-medium text-gray-700">
+            <button 
+              onClick={() => setShowUpgrade(true)}
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/5 hover:bg-black/10 transition-colors text-xs font-medium text-gray-700"
+            >
               <Sparkles size={14} className="text-yellow-600" />
               Upgrade
             </button>
           </div>
         </header>
 
-        {/* Chat Area */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {showUpgrade ? (
+          <div className="flex-1 overflow-y-auto bg-white p-8">
+            <div className="max-w-4xl mx-auto">
+              <button 
+                onClick={() => setShowUpgrade(false)}
+                className="mb-8 flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+              >
+                <X size={16} />
+                Back to chat
+              </button>
+              
+              <div className="text-center mb-12">
+                <h2 className="text-4xl font-bold mb-4">Upgrade your plan</h2>
+                <p className="text-gray-500 text-lg">Get the most out of AM with advanced features</p>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-8">
+                {/* Free Plan */}
+                <div className="border border-border rounded-3xl p-8 flex flex-col">
+                  <h3 className="text-2xl font-bold mb-2">Free</h3>
+                  <p className="text-gray-500 mb-6">Basic access to AM</p>
+                  <div className="text-4xl font-bold mb-8">$0<span className="text-lg text-gray-400 font-normal">/month</span></div>
+                  
+                  <ul className="space-y-4 mb-12 flex-1">
+                    <li className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      Standard response speed
+                    </li>
+                    <li className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      Regular model updates
+                    </li>
+                    <li className="flex items-center gap-3 text-sm text-gray-400">
+                      <X size={18} />
+                      Limited image generation
+                    </li>
+                  </ul>
+
+                  <button className="w-full py-3 rounded-xl border border-border font-bold text-gray-400 cursor-not-allowed">
+                    Current Plan
+                  </button>
+                </div>
+
+                {/* Pro Plan */}
+                <div className="border-2 border-indigo-600 rounded-3xl p-8 flex flex-col relative overflow-hidden">
+                  <div className="absolute top-0 right-0 bg-indigo-600 text-white px-4 py-1 text-xs font-bold rounded-bl-xl">
+                    POPULAR
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2">Pro</h3>
+                  <p className="text-gray-500 mb-6">For power users and creators</p>
+                  <div className="text-4xl font-bold mb-8">$20<span className="text-lg text-gray-400 font-normal">/month</span></div>
+                  
+                  <ul className="space-y-4 mb-12 flex-1">
+                    <li className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      Fastest response speed
+                    </li>
+                    <li className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      Priority access to new features
+                    </li>
+                    <li className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      Unlimited image generation
+                    </li>
+                    <li className="flex items-center gap-3 text-sm">
+                      <CheckCircle2 size={18} className="text-emerald-500" />
+                      Advanced problem solving
+                    </li>
+                  </ul>
+
+                  <button className="w-full py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2">
+                    Upgrade Now
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Chat Area */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center p-4 text-center max-w-5xl mx-auto">
               <motion.div
@@ -470,55 +603,57 @@ export default function App() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-gradient-to-t from-chat-bg via-chat-bg to-transparent">
-          <div className="max-w-5xl mx-auto relative">
-            <div className="relative flex items-end w-full bg-white border border-border rounded-2xl focus-within:border-gray-400 shadow-sm transition-colors">
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Message AM..."
-                rows={1}
-                className="w-full bg-transparent border-none focus:ring-0 resize-none py-4 px-4 text-lg max-h-60 custom-scrollbar text-gray-900 font-semibold"
-                style={{ height: "auto" }}
-                onInput={(e) => {
-                  const target = e.target as HTMLTextAreaElement;
-                  target.style.height = "auto";
-                  target.style.height = `${target.scrollHeight}px`;
-                }}
-              />
-              {isLoading ? (
-                <button
-                  onClick={stopGenerating}
-                  className="m-2 p-2 rounded-xl bg-black text-white hover:bg-gray-800 transition-all"
-                >
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleSend()}
-                  disabled={!input.trim()}
-                  className={cn(
-                    "m-2 p-2 rounded-xl transition-all",
-                    input.trim()
-                      ? "bg-black text-white hover:bg-gray-800"
-                      : "bg-black/5 text-gray-300 cursor-not-allowed"
+            <div className="p-4 bg-gradient-to-t from-chat-bg via-chat-bg to-transparent">
+              <div className="max-w-5xl mx-auto relative">
+                <div className="relative flex items-end w-full bg-white border border-border rounded-2xl focus-within:border-gray-400 shadow-sm transition-colors">
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    placeholder="Message AM..."
+                    rows={1}
+                    className="w-full bg-transparent border-none focus:ring-0 resize-none py-4 px-4 text-lg max-h-60 custom-scrollbar text-gray-900 font-semibold"
+                    style={{ height: "auto" }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLTextAreaElement;
+                      target.style.height = "auto";
+                      target.style.height = `${target.scrollHeight}px`;
+                    }}
+                  />
+                  {isLoading ? (
+                    <button
+                      onClick={stopGenerating}
+                      className="m-2 p-2 rounded-xl bg-black text-white hover:bg-gray-800 transition-all"
+                    >
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleSend()}
+                      disabled={!input.trim()}
+                      className={cn(
+                        "m-2 p-2 rounded-xl transition-all",
+                        input.trim()
+                          ? "bg-black text-white hover:bg-gray-800"
+                          : "bg-black/5 text-gray-300 cursor-not-allowed"
+                      )}
+                    >
+                      <Send size={18} />
+                    </button>
                   )}
-                >
-                  <Send size={18} />
-                </button>
-              )}
+                </div>
+                <p className="text-[10px] text-center mt-3 text-gray-400">
+                  AM can make mistakes. Check important info.
+                </p>
+              </div>
             </div>
-            <p className="text-[10px] text-center mt-3 text-gray-400">
-              AM can make mistakes. Check important info.
-            </p>
-          </div>
-        </div>
+          </>
+        )}
       </main>
     </div>
   );
